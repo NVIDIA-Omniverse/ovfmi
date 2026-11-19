@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# CI and Release run this action before demo tests. It builds the native runtime
+# and demo models, tests native FMI execution, and sets up isolated OpenUSD.
+
+name: Prepare the demoapp environment
+description: Build both FMI backends and demo models, and provision isolated OpenUSD.
+
+runs:
+  using: composite
+  steps:
+    - name: Isolate the runtime test environment
+      shell: bash
+      run: |
+        python -m venv .ci-venv
+        python -c "import os, pathlib; p = pathlib.Path('.ci-venv') / ('Scripts' if os.name == 'nt' else 'bin'); f = open(os.environ['GITHUB_PATH'], 'a', encoding='utf-8'); f.write(str(p.resolve()) + '\n'); f.close()"
+
+    - name: Install model and stage test dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        # pytest 9 requires packaging>=24; ovphysx requires packaging<24.
+        python -m pip install -e '.[build,fmpy]' 'pytest>=8,<9' -r demoapp/requirements.txt
+        python -m pip check
+
+    - name: Build the native FMI runtime
+      shell: bash
+      run: |
+        set -euo pipefail
+        rustup toolchain install 1.97.1 --profile minimal
+        cargo +1.97.1 build --manifest-path native/Cargo.toml --release --locked
+
+    - name: Build demo FMUs and SSPs
+      if: runner.os != 'Windows'
+      shell: bash
+      run: python demoapp/build_fmu.py
+
+    - name: Build demo FMUs and SSPs
+      if: runner.os == 'Windows'
+      # vswhere finds the MSVC tools without a fixed Visual Studio edition path.
+      # Preserve the compiler environment for source-built test fixtures.
+      shell: cmd
+      run: |
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSPATH=%%i"
+        if not defined VSPATH ( echo No Visual Studio install with the MSVC x64 tools & exit /b 1 )
+        call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+        python demoapp/build_fmu.py || exit /b 1
+        python -c "import os; stream = open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8'); stream.writelines(f'{key}={os.environ[key]}\n' for key in ('PATH', 'INCLUDE', 'LIB', 'LIBPATH')); stream.close()" || exit /b 1
+
+    - name: Test FMI execution without Python
+      shell: bash
+      run: cargo +1.97.1 test --manifest-path native/Cargo.toml --release --locked
+
+    # usd-core must not share an environment with ovrtx, which refuses to load
+    # when pxr is importable. demoapp/setup.sh isolates it the same way. Without
+    # USD_PYTHON the schema-parser tests fall back to sys.executable and error
+    # on the missing pxr module.
+    - name: Set up the isolated USD environment
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        python -m venv /tmp/usd-venv
+        /tmp/usd-venv/bin/python -m pip install --quiet --upgrade pip
+        /tmp/usd-venv/bin/python -m pip install --quiet usd-core
+        /tmp/usd-venv/bin/python -c "from pxr import Usd; print('usd-core', Usd.GetVersion())"
+        echo "USD_PYTHON=/tmp/usd-venv/bin/python" >> "$GITHUB_ENV"
+
+    - name: Set up the isolated USD environment
+      if: runner.os == 'Windows'
+      # Separate from the POSIX step because the interpreter lives in Scripts/,
+      # and USD_PYTHON must be a native path for Path.exists() to resolve it.
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = "Stop"
+        $venv = Join-Path $env:RUNNER_TEMP "usd-venv"
+        python -m venv $venv
+        $usdPython = Join-Path $venv "Scripts\python.exe"
+        & $usdPython -m pip install --quiet --upgrade pip
+        & $usdPython -m pip install --quiet usd-core
+        & $usdPython -c "from pxr import Usd; print('usd-core', Usd.GetVersion())"
+        "USD_PYTHON=$usdPython" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8

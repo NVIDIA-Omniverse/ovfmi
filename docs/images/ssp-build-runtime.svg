@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="708" viewBox="0 0 1080 708" role="img" aria-labelledby="title description">
+  <title id="title">SSP preparation and native runtime execution</title>
+  <desc id="description">At build time, SSP source is converted by build_ssp_container.py and FMPy into a .native.fmu container. At runtime, the Python FmiHost calls ctypes, which crosses the private C ABI into ovfmi_native. The Rust library uses fmi-rs to load the prepared container FMU and execute its component FMUs. The native execution path does not import FMPy or embed a Python interpreter.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#586675"/>
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #192735; }
+      .title { font-size: 27px; font-weight: 700; }
+      .section { font-size: 17px; font-weight: 700; letter-spacing: 1.5px; }
+      .label { font-size: 21px; font-weight: 700; }
+      .detail { font-size: 17px; fill: #495a6c; }
+      .code { font-family: Consolas, 'Liberation Mono', monospace; font-size: 21px; font-weight: 700; }
+      .arrow { fill: none; stroke: #586675; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1080" height="708" rx="18" fill="#ffffff"/>
+  <text class="title" x="48" y="46">SSP build/runtime split</text>
+  <text class="section" x="48" y="87">BUILD TIME</text>
+  <text class="section" x="576" y="87">RUNTIME · NATIVE BACKEND</text>
+
+  <rect x="48" y="104" width="424" height="564" rx="14" fill="#f7f8fa" stroke="#d3dbe3"/>
+  <text class="detail" x="260" y="140" text-anchor="middle">Python and FMPy preparation</text>
+  <rect x="80" y="166" width="360" height="64" rx="10" fill="#ffffff" stroke="#c8d2dc"/>
+  <text class="label" x="260" y="205" text-anchor="middle">SSP source</text>
+
+  <path class="arrow" d="M 260 230 V 290"/>
+  <rect x="80" y="293" width="360" height="88" rx="10" fill="#ffffff" stroke="#c8d2dc"/>
+  <text class="code" x="260" y="328" text-anchor="middle">build_ssp_container.py</text>
+  <text class="detail" x="260" y="357" text-anchor="middle">FMPy container generator</text>
+
+  <path class="arrow" d="M 260 381 V 483"/>
+  <rect x="80" y="486" width="360" height="64" rx="10" fill="#eaf4da" stroke="#b0c694"/>
+  <text class="code" x="260" y="525" text-anchor="middle">.native.fmu</text>
+  <text class="detail" x="260" y="589" text-anchor="middle">Prepared container artifact</text>
+  <text class="detail" x="260" y="616" text-anchor="middle">distributed alongside the scene</text>
+
+  <rect x="576" y="104" width="456" height="170" rx="14" fill="#eef4fb" stroke="#c3d4e9"/>
+  <rect x="608" y="124" width="392" height="54" rx="10" fill="#ffffff" stroke="#adc2dd"/>
+  <text class="code" x="804" y="158" text-anchor="middle">FmiHost</text>
+  <path class="arrow" d="M 804 178 V 202"/>
+  <rect x="608" y="205" width="392" height="48" rx="10" fill="#ffffff" stroke="#adc2dd"/>
+  <text class="label" x="804" y="236" text-anchor="middle">ctypes</text>
+  <text class="detail" x="1010" y="294" text-anchor="end">Private C ABI</text>
+  <path d="M 804 253 V 304" fill="none" stroke="#586675" stroke-width="2"/>
+
+  <rect x="576" y="304" width="456" height="364" rx="14" fill="#f0f6e8" stroke="#bdcea5"/>
+  <path class="arrow" d="M 804 304 V 331"/>
+  <rect x="608" y="334" width="392" height="56" rx="10" fill="#ffffff" stroke="#b0c694"/>
+  <text class="code" x="804" y="369" text-anchor="middle">ovfmi_native</text>
+  <path class="arrow" d="M 804 390 V 407"/>
+  <rect x="608" y="410" width="392" height="54" rx="10" fill="#ffffff" stroke="#b0c694"/>
+  <text class="label" x="804" y="444" text-anchor="middle">fmi-rs</text>
+  <path class="arrow" d="M 804 464 V 483"/>
+  <rect x="608" y="486" width="392" height="64" rx="10" fill="#ffffff" stroke="#b0c694"/>
+  <text class="label" x="804" y="525" text-anchor="middle">Container FMU</text>
+  <path class="arrow" d="M 804 550 V 569"/>
+  <rect x="608" y="572" width="392" height="54" rx="10" fill="#ffffff" stroke="#b0c694"/>
+  <text class="label" x="804" y="606" text-anchor="middle">Component FMUs</text>
+  <text class="detail" x="804" y="652" text-anchor="middle">Native execution · no embedded Python</text>
+
+  <path class="arrow" d="M 440 518 H 605" stroke-dasharray="6 5"/>
+  <text class="detail" x="524" y="505" text-anchor="middle">load artifact</text>
+</svg>

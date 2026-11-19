@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<fmiModelDescription fmiVersion="2.0" modelName="Integrator"
+                     guid="b44b37cb-a7e6-4131-aa24-9d18d2f52407">
+  <CoSimulation modelIdentifier="Integrator" canHandleVariableCommunicationStepSize="true"/>
+  <ModelVariables>
+    <ScalarVariable name="rate" valueReference="0" causality="input" variability="continuous">
+      <Real start="1"/>
+    </ScalarVariable>
+    <ScalarVariable name="integral" valueReference="1" causality="output" variability="continuous" initial="calculated">
+      <Real/>
+    </ScalarVariable>
+  </ModelVariables>
+  <ModelStructure>
+    <Outputs><Unknown index="2"/></Outputs>
+    <InitialUnknowns><Unknown index="2"/></InitialUnknowns>
+  </ModelStructure>
+</fmiModelDescription>

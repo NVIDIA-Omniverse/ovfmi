@@ -1,0 +1,132 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Test pull requests and pushes to main or release branches, and build both
+# platform distributions. Run this before Release or public-source approval.
+# `ci-required` is the required status check.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main, 'release/**']
+  push:
+    branches: [main, 'release/**']
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # A newer push to a PR supersedes the in-flight run; main keeps every run.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONFAULTHANDLER: "1"
+
+jobs:
+  test:
+    name: Test ${{ matrix.os }} py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Keep the validated compiler image explicit: the pinned fmi-rs C
+          # parser does not build with Ubuntu 26.04's default C dialect.
+          - os: ubuntu-24.04
+            python: "3.10"
+            demoapp: true
+          - os: ubuntu-24.04
+            python: "3.11"
+            demoapp: true
+          - os: ubuntu-24.04
+            python: "3.12"
+            demoapp: true
+          - os: ubuntu-24.04
+            python: "3.13"
+            demoapp: true
+          - os: windows-latest
+            python: "3.12"
+            demoapp: true
+    steps:
+      - name: Check out repository
+        # CPU routing tests read the text USD-FMI overlay, not binary geometry.
+        # GPU demo validation needs a separate checkout with LFS enabled.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install ovfmi and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest
+
+      - name: Prepare the demoapp environment
+        if: ${{ matrix.demoapp }}
+        # Builds/tests Rust, prepares FMUs/containers and isolated USD_PYTHON.
+        uses: ./.github/actions/prepare-demoapp
+
+      - name: Run tests
+        run: python -m pytest ${{ matrix.demoapp && 'tests demoapp/tests' || 'tests' }} --junitxml=build/test-results.xml
+
+      - name: Reject missing backend coverage
+        run: python tools/check_test_report.py build/test-results.xml
+
+      - name: Upload test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: tests-${{ matrix.os }}-py${{ matrix.python }}
+          path: build/test-results.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+  package:
+    name: Build distributions
+    uses: ./.github/workflows/build-distributions.yml
+    with:
+      artifact-name: distributions
+
+  ci-required:
+    # The ONLY job to mark as a required status check. Marking the matrix legs
+    # required individually would deadlock a PR whenever one is skipped, since
+    # a skipped check never reports a conclusion.
+    name: CI required
+    needs: [test, package]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Gate on job results
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
+        run: |
+          set -uo pipefail
+          rc=0
+          for entry in "test:$TEST_RESULT" "package:$PACKAGE_RESULT"; do
+            name="${entry%%:*}"
+            result="${entry#*:}"
+            echo "$name -> $result"
+            case "$result" in
+              failure|cancelled)
+                echo "::error::required job '$name' concluded: $result"
+                rc=1
+                ;;
+            esac
+          done
+          if [ "$rc" -eq 0 ]; then
+            echo "All required jobs passed or were correctly skipped."
+          else
+            echo "See the failing job above for the pytest output."
+          fi
+          exit $rc

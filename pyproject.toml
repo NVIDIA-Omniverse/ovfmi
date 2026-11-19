@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ovfmi"
+version = "0.3.3"
+description = "USD-authored FMI co-simulation for ovstage"
+readme = { file = "docs/public/README.md", content-type = "text/markdown" }
+authors = [{ name = "Omniverse FMI Team" }]
+license = "Apache-2.0"
+license-files = ["LICENSE.md", "THIRD_PARTY_NOTICES.md"]
+requires-python = ">=3.10,<3.14"
+keywords = [
+    "co-simulation",
+    "digital-twin",
+    "fmi",
+    "nvidia",
+    "openusd",
+    "simulation",
+    "ssp",
+    "usd",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "numpy>=2.2",
+]
+
+[project.optional-dependencies]
+build = ["fmpy==0.3.32"]
+fmpy = ["fmpy==0.3.32"]
+
+[project.urls]
+Homepage = "https://github.com/NVIDIA-Omniverse/ovfmi"
+Documentation = "https://github.com/NVIDIA-Omniverse/ovfmi#readme"
+Repository = "https://github.com/NVIDIA-Omniverse/ovfmi"
+Issues = "https://github.com/NVIDIA-Omniverse/ovfmi/issues"
+
+[tool.setuptools]
+package-dir = {ovfmi = "python"}
+packages = ["ovfmi"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

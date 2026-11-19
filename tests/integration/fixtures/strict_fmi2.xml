@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<fmiModelDescription fmiVersion="2.0" modelName="StrictLifecycle" guid="strict-lifecycle">
+  <CoSimulation modelIdentifier="StrictLifecycle" canHandleVariableCommunicationStepSize="true"/>
+  <ModelVariables>
+    <ScalarVariable name="rate" valueReference="0" causality="input" variability="continuous">
+      <Real start="1" min="0"/>
+    </ScalarVariable>
+    <ScalarVariable name="integral" valueReference="1" causality="output" variability="continuous" initial="exact">
+      <Real start="0"/>
+    </ScalarVariable>
+    <ScalarVariable name="gain" valueReference="2" causality="parameter" variability="fixed" initial="exact">
+      <Real start="1"/>
+    </ScalarVariable>
+    <ScalarVariable name="guess" valueReference="3" causality="local" variability="continuous" initial="approx">
+      <Real start="0"/>
+    </ScalarVariable>
+    <ScalarVariable name="initial_rate" valueReference="4" causality="output" variability="discrete" initial="calculated">
+      <Real/>
+    </ScalarVariable>
+  </ModelVariables>
+  <ModelStructure>
+    <Outputs><Unknown index="2"/><Unknown index="5"/></Outputs>
+    <InitialUnknowns><Unknown index="5"/></InitialUnknowns>
+  </ModelStructure>
+</fmiModelDescription>

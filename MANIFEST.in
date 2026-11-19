@@ -1,0 +1,8 @@
+include VERSION.md
+include THIRD_PARTY_NOTICES.md
+include native/Cargo.toml native/Cargo.lock
+recursive-include native/src *.rs
+recursive-include native/include *.h
+recursive-include native/licenses *
+include tools/build_ssp_container.py
+include tools/generate_native_notices.py

@@ -1,0 +1,105 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Run from an existing tag in the public ovfmi repository after source publication.
+# Build and test both wheels and the source archive; attach them to its draft
+# GitHub Release when dry_run is false. This workflow does not run internally.
+
+name: Public release wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and test without attaching release assets"
+        type: boolean
+        default: true
+
+concurrency:
+  group: public-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate the public release tag
+    if: ${{ github.repository == 'NVIDIA-Omniverse/ovfmi' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # GitHub requires push access to read draft Releases.
+      contents: write
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      release-id: ${{ steps.release.outputs.release_id }}
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Check the tag and existing draft Release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/scripts/public-release.py
+
+  build:
+    name: Build distributions from the release tag
+    needs: validate
+    uses: ./.github/workflows/build-distributions.yml
+    with:
+      artifact-name: public-release-${{ needs.validate.outputs.version }}
+      retention-days: 90
+
+  dry-run-summary:
+    name: Summarize the public release rehearsal
+    needs: [validate, build]
+    if: ${{ inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report the tested artifacts
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          echo "Public release dry run completed for v${VERSION}." >> "$GITHUB_STEP_SUMMARY"
+          echo "Both tested wheels and the source archive are in public-release-${VERSION}. No Release assets were uploaded." >> "$GITHUB_STEP_SUMMARY"
+
+  upload:
+    name: Attach distributions to the draft Release
+    needs: [validate, build]
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Download the tested distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: public-release-${{ needs.validate.outputs.version }}
+          path: dist
+
+      - name: Verify the release and attach its assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_RELEASE_ID: ${{ needs.validate.outputs.release-id }}
+        run: python .github/scripts/public-release.py --dist dist --upload

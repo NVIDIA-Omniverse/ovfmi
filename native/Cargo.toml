@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "ovfmi-native"
+version = "0.3.3"
+edition = "2024"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+tempfile = "3"
+
+[dependencies.fmi-rs]
+git = "https://github.com/CATIA-Systems/fmi-rs.git"
+# Stock v0.3.5; uses zip >=9.1 (fix for GHSA-m665-v7pm-7grj).
+rev = "99b9a6011abae49a6e191918cde9fe49e100562d"
